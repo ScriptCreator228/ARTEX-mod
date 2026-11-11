@@ -1,0 +1,9 @@
+{
+  "geode": "5.0.0",
+  "gd": { "win": "2.2081", "android": "2.2081" },
+  "id": "pussto.artex",
+  "name": "ARTEX",
+  "version": "1.0.0",
+  "developer": "PusstoKBrawl",
+  "description": "ARTEX mod project starter."
+}
