@@ -6,21 +6,14 @@ using namespace geode::prelude;
 
 class $modify(ARTEXMenuLayer, MenuLayer) {
 
-    void onARTEX(CCObject*) {
-        FLAlertLayer::create(
-            "ARTEX - Auto Build",
-            "Difficulty\n"
-            "Blocks & Spikes\n"
-            "Portals\n"
-            "Gamemodes\n"
-            "Details\n"
-            "Level Size",
-            "CLOSE"
-        )->show();
-    }
-
     bool init() {
-        if (!MenuLayer::init()) return false;
+        if (!MenuLayer::init()) {
+            return false;
+        }
+
+        log::info("ARTEX MenuLayer loaded!");
+
+        auto winSize = CCDirector::sharedDirector()->getWinSize();
 
         auto menu = CCMenu::create();
         menu->setPosition({0, 0});
@@ -32,13 +25,28 @@ class $modify(ARTEXMenuLayer, MenuLayer) {
         );
 
         button->setPosition({
-            CCDirector::sharedDirector()->getWinSize().width - 55,
-            45
+            winSize.width - 55.0f,
+            45.0f
         });
 
         menu->addChild(button);
         this->addChild(menu, 100);
 
+        log::info("ARTEX button created!");
+
         return true;
+    }
+
+    void onARTEX(CCObject*) {
+        FLAlertLayer::create(
+            "ARTEX - Auto Build",
+            "Difficulty\n"
+            "Blocks & Spikes\n"
+            "Portals\n"
+            "Gamemodes\n"
+            "Details\n"
+            "Level Size",
+            "CLOSE"
+        )->show();
     }
 };
