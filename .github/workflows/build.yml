@@ -1,0 +1,22 @@
+name: Build ARTEX
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: geode-sdk/build-geode-mod@main
+        id: build
+        with:
+          target: Android64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ARTEX-Android64
+          path: ${{ steps.build.outputs.build-output }}
