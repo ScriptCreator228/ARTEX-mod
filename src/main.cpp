@@ -1,17 +1,15 @@
 
 #include <Geode/Geode.hpp>
-#include <Geode/modify/MenuLayer.hpp>
+#include <Geode/modify/EditorUI.hpp>
 
 using namespace geode::prelude;
 
-class $modify(ARTEXMenuLayer, MenuLayer) {
+class $modify(ARTEXEditorUI, EditorUI) {
 
-    bool init() {
-        if (!MenuLayer::init()) {
+    bool init(LevelEditorLayer* editorLayer) {
+        if (!EditorUI::init(editorLayer)) {
             return false;
         }
-
-        log::info("ARTEX MenuLayer loaded!");
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
 
@@ -21,18 +19,16 @@ class $modify(ARTEXMenuLayer, MenuLayer) {
         auto button = CCMenuItemSpriteExtra::create(
             ButtonSprite::create("ARTEX"),
             this,
-            menu_selector(ARTEXMenuLayer::onARTEX)
+            menu_selector(ARTEXEditorUI::onARTEX)
         );
 
         button->setPosition({
             winSize.width - 55.0f,
-            45.0f
+            winSize.height - 45.0f
         });
 
         menu->addChild(button);
         this->addChild(menu, 100);
-
-        log::info("ARTEX button created!");
 
         return true;
     }
@@ -40,12 +36,12 @@ class $modify(ARTEXMenuLayer, MenuLayer) {
     void onARTEX(CCObject*) {
         FLAlertLayer::create(
             "ARTEX - Auto Build",
-            "Difficulty\n"
-            "Blocks & Spikes\n"
-            "Portals\n"
-            "Gamemodes\n"
-            "Details\n"
-            "Level Size",
+            "Difficulty >\n"
+            "Blocks & Spikes >\n"
+            "Portals >\n"
+            "Gamemodes >\n"
+            "Details >\n"
+            "Level Size >",
             "CLOSE"
         )->show();
     }
