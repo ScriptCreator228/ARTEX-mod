@@ -2,101 +2,87 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/EditorUI.hpp>
 #include <string>
+#include <algorithm>
+#include <cstdlib>
 
 using namespace geode::prelude;
 
 class ARTEXPanel : public CCLayer {
-protected:
     CCMenu* m_menu = nullptr;
     CCLabelBMFont* m_title = nullptr;
     CCLabelBMFont* m_status = nullptr;
+
     int m_page = -1;
     std::string m_selected[7];
 
-    static const char* const* optionsForPage(int page, int& count) {
-        static const char* const difficulty[] = {
+    static const char* const* getOptions(int page, int& count) {
+        static const char* difficulty[] = {
             "Easy", "Normal", "Hard", "Harder", "Insane",
             "Demon", "Extreme Demon", "Mega Demon",
             "Giga Demon", "Tera Demon", "Ultra Demon"
         };
 
-        static const char* const blocks[] = {
+        static const char* blocks[] = {
             "Classic", "Modern", "Glow", "Mixed"
         };
 
-        static const char* const portals[] = {
+        static const char* portals[] = {
             "None", "Speed", "Gravity", "Dual",
             "Mini", "UFO", "Wave", "Robot",
             "Spider", "Ball", "Ship", "Mixed"
         };
 
-        static const char* const gamemodes[] = {
+        static const char* modes[] = {
             "Cube", "Ship", "Ball", "UFO",
             "Wave", "Robot", "Spider", "Swing", "Mixed"
         };
 
-        static const char* const details[] = {
+        static const char* details[] = {
             "Low", "Medium", "High", "Ultra"
         };
 
-        static const char* const sizes[] = {
+        static const char* sizes[] = {
             "Tiny", "Small", "Medium", "Large", "XL"
         };
 
-        static const char* const counts[] = {
-            "100", "500", "1000", "2500",
-            "5000", "10000"
+        static const char* counts[] = {
+            "100", "250", "500", "1000"
         };
 
         switch (page) {
-            case 0:
-                count = 11;
-                return difficulty;
-            case 1:
-                count = 4;
-                return blocks;
-            case 2:
-                count = 12;
-                return portals;
-            case 3:
-                count = 9;
-                return gamemodes;
-            case 4:
-                count = 4;
-                return details;
-            case 5:
-                count = 5;
-                return sizes;
-            case 6:
-                count = 6;
-                return counts;
-            default:
-                count = 0;
-                return nullptr;
+            case 0: count = 11; return difficulty;
+            case 1: count = 4; return blocks;
+            case 2: count = 12; return portals;
+            case 3: count = 9; return modes;
+            case 4: count = 4; return details;
+            case 5: count = 5; return sizes;
+            case 6: count = 4; return counts;
+            default: count = 0; return nullptr;
         }
     }
 
     static const char* pageName(int page) {
-        switch (page) {
-            case 0: return "Difficulty";
-            case 1: return "Blocks & Spikes";
-            case 2: return "Portals";
-            case 3: return "Gamemodes";
-            case 4: return "Details";
-            case 5: return "Level Size";
-            case 6: return "Object Count";
-            default: return "Auto Build";
-        }
+        static const char* names[] = {
+            "Difficulty", "Blocks & Spikes", "Portals",
+            "Gamemodes", "Details", "Level Size", "Object Count"
+        };
+
+        return page >= 0 && page < 7 ? names[page] : "AUTO BUILD";
     }
 
     void beginMenu() {
         if (m_menu) {
             m_menu->removeFromParentAndCleanup(true);
-            m_menu = nullptr;
         }
 
+        auto size = CCDirector::sharedDirector()->getWinSize();
+
         m_menu = CCMenu::create();
-        m_menu->setPosition({0, 0});
+        m_menu->setPosition({
+            size.width / 2,
+            size.height / 2
+        });
+
         this->addChild(m_menu, 10);
     }
 
@@ -106,7 +92,7 @@ protected:
         float y,
         int tag,
         SEL_MenuHandler callback,
-        float scale = 0.62f
+        float scale = 0.48f
     ) {
         auto sprite = ButtonSprite::create(label.c_str());
 
@@ -125,11 +111,14 @@ protected:
         m_menu->addChild(button);
     }
 
-    void addCloseButton(float cx, float cy) {
+    void addClose(float width, float height) {
         addButton(
-            "X", cx + 207, cy + 158, 101,
+            "X",
+            width / 2 - 22,
+            height / 2 - 20,
+            101,
             menu_selector(ARTEXPanel::onClose),
-            0.55f
+            0.42f
         );
     }
 
@@ -138,20 +127,15 @@ protected:
         beginMenu();
 
         auto size = CCDirector::sharedDirector()->getWinSize();
-        float cx = size.width / 2;
-        float cy = size.height / 2;
+        float width = std::min(360.f, size.width - 20.f);
+        float height = std::min(290.f, size.height - 20.f);
 
         m_title->setString("ARTEX - AUTO BUILD");
-        m_status->setString("Choose settings and press BUILD");
+        m_status->setString("Choose settings");
 
         const char* names[] = {
-            "Difficulty",
-            "Blocks & Spikes",
-            "Portals",
-            "Gamemodes",
-            "Details",
-            "Level Size",
-            "Object Count"
+            "Difficulty", "Blocks & Spikes", "Portals",
+            "Gamemodes", "Details", "Level Size", "Object Count"
         };
 
         for (int i = 0; i < 7; i++) {
@@ -162,24 +146,24 @@ protected:
 
             addButton(
                 label,
-                cx,
-                cy + 101 - i * 31,
+                0,
+                height / 2 - 55 - i * 23,
                 i,
                 menu_selector(ARTEXPanel::onMainAction),
-                0.58f
+                0.43f
             );
         }
 
         addButton(
             "BUILD",
-            cx,
-            cy - 137,
+            0,
+            -height / 2 + 43,
             100,
             menu_selector(ARTEXPanel::onMainAction),
-            0.75f
+            0.65f
         );
 
-        addCloseButton(cx, cy);
+        addClose(width, height);
     }
 
     void showPage(int page) {
@@ -187,21 +171,20 @@ protected:
         beginMenu();
 
         auto size = CCDirector::sharedDirector()->getWinSize();
-        float cx = size.width / 2;
-        float cy = size.height / 2;
+        float height = std::min(290.f, size.height - 20.f);
 
         m_title->setString(pageName(page));
         m_status->setString("Select an option");
 
         int count = 0;
-        auto options = optionsForPage(page, count);
+        auto options = getOptions(page, count);
 
         for (int i = 0; i < count; i++) {
             int column = i % 2;
             int row = i / 2;
 
-            float x = cx + (column == 0 ? -108.0f : 108.0f);
-            float y = cy + 91.0f - row * 36.0f;
+            float x = column == 0 ? -85.f : 85.f;
+            float y = height / 2 - 65.f - row * 26.f;
 
             addButton(
                 options[i],
@@ -209,20 +192,68 @@ protected:
                 y,
                 i,
                 menu_selector(ARTEXPanel::onPick),
-                0.53f
+                0.43f
             );
         }
 
         addButton(
             "BACK",
-            cx,
-            cy - 145,
+            0,
+            -height / 2 + 43,
             200,
             menu_selector(ARTEXPanel::onBack),
-            0.65f
+            0.55f
         );
 
-        addCloseButton(cx, cy);
+        addClose(360.f, height);
+    }
+
+    void buildLevel() {
+        auto editor = LevelEditorLayer::get();
+
+        if (!editor) {
+            m_status->setString("Editor not found!");
+            return;
+        }
+
+        int count = std::atoi(m_selected[6].c_str());
+
+        if (count <= 0) {
+            m_status->setString("Invalid object count");
+            return;
+        }
+
+        float startX = std::max(
+            120.f,
+            editor->getLastObjectX() + 60.f
+        );
+
+        int created = 0;
+
+        for (int i = 0; i < count; i++) {
+            bool spike = (i % 5 == 4);
+
+            int objectID = spike ? 8 : 1;
+
+            float x = startX + i * 30.f;
+            float y = spike ? 120.f : 90.f;
+
+            auto object = editor->createObject(
+                objectID,
+                {x, y},
+                false
+            );
+
+            if (object) {
+                created++;
+            }
+        }
+
+        std::string message = "Created: ";
+        message += std::to_string(created);
+        message += " objects";
+
+        m_status->setString(message.c_str());
     }
 
 public:
@@ -247,21 +278,23 @@ public:
         m_selected[3] = "Cube";
         m_selected[4] = "Medium";
         m_selected[5] = "Medium";
-        m_selected[6] = "1000";
+        m_selected[6] = "100";
 
         auto size = CCDirector::sharedDirector()->getWinSize();
-        float cx = size.width / 2;
-        float cy = size.height / 2;
+
+        float width = std::min(360.f, size.width - 20.f);
+        float height = std::min(290.f, size.height - 20.f);
 
         auto background = CCLayerColor::create(
-            ccc4(25, 30, 48, 245),
-            470,
-            390
+            ccc4(24, 29, 45, 245),
+            width,
+            height
         );
 
-        background->ignoreAnchorPointForPosition(false);
-        background->setAnchorPoint({0.5f, 0.5f});
-        background->setPosition({cx, cy});
+        background->setPosition({
+            (size.width - width) / 2,
+            (size.height - height) / 2
+        });
 
         this->addChild(background);
 
@@ -269,16 +302,26 @@ public:
             "ARTEX - AUTO BUILD",
             "bigFont.fnt"
         );
-        m_title->setScale(0.58f);
-        m_title->setPosition({cx, cy + 158});
+
+        m_title->setScale(0.55f);
+        m_title->setPosition({
+            size.width / 2,
+            size.height / 2 + height / 2 - 23
+        });
+
         this->addChild(m_title, 5);
 
         m_status = CCLabelBMFont::create(
-            "Choose settings and press BUILD",
+            "Choose settings",
             "bigFont.fnt"
         );
-        m_status->setScale(0.38f);
-        m_status->setPosition({cx, cy - 174});
+
+        m_status->setScale(0.36f);
+        m_status->setPosition({
+            size.width / 2,
+            size.height / 2 - height / 2 + 15
+        });
+
         this->addChild(m_status, 5);
 
         showMain();
@@ -289,9 +332,7 @@ public:
         int tag = static_cast<CCNode*>(sender)->getTag();
 
         if (tag == 100) {
-            m_status->setString(
-                "Generator is not connected yet"
-            );
+            buildLevel();
             return;
         }
 
@@ -301,12 +342,10 @@ public:
     }
 
     void onPick(CCObject* sender) {
-        if (m_page < 0 || m_page > 6) return;
+        int count = 0;
+        auto options = getOptions(m_page, count);
 
         int index = static_cast<CCNode*>(sender)->getTag();
-
-        int count = 0;
-        auto options = optionsForPage(m_page, count);
 
         if (!options || index < 0 || index >= count) return;
 
@@ -326,9 +365,7 @@ public:
 class $modify(ARTEXEditorUI, EditorUI) {
 
     bool init(LevelEditorLayer* editorLayer) {
-        if (!EditorUI::init(editorLayer)) {
-            return false;
-        }
+        if (!EditorUI::init(editorLayer)) return false;
 
         auto size = CCDirector::sharedDirector()->getWinSize();
 
@@ -342,8 +379,8 @@ class $modify(ARTEXEditorUI, EditorUI) {
         );
 
         button->setPosition({
-            size.width - 55.0f,
-            size.height - 45.0f
+            size.width - 55.f,
+            size.height - 45.f
         });
 
         menu->addChild(button);
