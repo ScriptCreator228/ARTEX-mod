@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>
 #include <cstdlib>
+#include <ctime>
 
 using namespace geode::prelude;
 
@@ -13,93 +14,45 @@ class ARTEXPanel : public CCLayer {
     CCLabelBMFont* m_status = nullptr;
 
     int m_page = -1;
-    std::string m_selected[7];
+    int m_difficulty = 0;
+    int m_size = 2;
+    int m_count = 250;
+    bool m_random = true;
 
-    static const char* const* getOptions(int page, int& count) {
-        static const char* difficulty[] = {
-            "Easy", "Normal", "Hard", "Harder", "Insane",
-            "Demon", "Extreme Demon", "Mega Demon",
-            "Giga Demon", "Tera Demon", "Ultra Demon"
-        };
+    const char* difficulties[11] = {
+        "Easy", "Normal", "Hard", "Harder", "Insane",
+        "Demon", "Extreme Demon", "Mega Demon",
+        "Giga Demon", "Tera Demon", "Ultra Demon"
+    };
 
-        static const char* blocks[] = {
-            "Classic", "Modern", "Glow", "Mixed"
-        };
+    const char* sizes[6] = {
+        "Tiny", "Small", "Medium", "Large", "XL", "XXL"
+    };
 
-        static const char* portals[] = {
-            "None", "Speed", "Gravity", "Dual",
-            "Mini", "UFO", "Wave", "Robot",
-            "Spider", "Ball", "Ship", "Mixed"
-        };
-
-        static const char* modes[] = {
-            "Cube", "Ship", "Ball", "UFO",
-            "Wave", "Robot", "Spider", "Swing", "Mixed"
-        };
-
-        static const char* details[] = {
-            "Low", "Medium", "High", "Ultra"
-        };
-
-        static const char* sizes[] = {
-            "Tiny", "Small", "Medium", "Large", "XL"
-        };
-
-        static const char* counts[] = {
-            "100", "250", "500", "1000"
-        };
-
-        switch (page) {
-            case 0: count = 11; return difficulty;
-            case 1: count = 4; return blocks;
-            case 2: count = 12; return portals;
-            case 3: count = 9; return modes;
-            case 4: count = 4; return details;
-            case 5: count = 5; return sizes;
-            case 6: count = 4; return counts;
-            default: count = 0; return nullptr;
-        }
-    }
-
-    static const char* pageName(int page) {
-        static const char* names[] = {
-            "Difficulty", "Blocks & Spikes", "Portals",
-            "Gamemodes", "Details", "Level Size", "Object Count"
-        };
-
-        return page >= 0 && page < 7 ? names[page] : "AUTO BUILD";
-    }
-
-    void beginMenu() {
+    void resetMenu() {
         if (m_menu) {
             m_menu->removeFromParentAndCleanup(true);
+            m_menu = nullptr;
         }
 
-        auto size = CCDirector::sharedDirector()->getWinSize();
+        auto win = CCDirector::sharedDirector()->getWinSize();
 
         m_menu = CCMenu::create();
-        m_menu->setPosition({
-            size.width / 2,
-            size.height / 2
-        });
-
+        m_menu->setPosition({win.width / 2, win.height / 2});
         this->addChild(m_menu, 10);
     }
 
     void addButton(
-        const std::string& label,
+        const char* text,
         float x,
         float y,
         int tag,
         SEL_MenuHandler callback,
-        float scale = 0.48f
+        float scale = 0.45f
     ) {
-        auto sprite = ButtonSprite::create(label.c_str());
-
+        auto sprite = ButtonSprite::create(text);
         auto button = CCMenuItemSpriteExtra::create(
-            sprite,
-            this,
-            callback
+            sprite, this, callback
         );
 
         if (!button) return;
@@ -107,105 +60,108 @@ class ARTEXPanel : public CCLayer {
         button->setTag(tag);
         button->setScale(scale);
         button->setPosition({x, y});
-
         m_menu->addChild(button);
-    }
-
-    void addClose(float width, float height) {
-        addButton(
-            "X",
-            width / 2 - 22,
-            height / 2 - 20,
-            101,
-            menu_selector(ARTEXPanel::onClose),
-            0.42f
-        );
     }
 
     void showMain() {
         m_page = -1;
-        beginMenu();
+        resetMenu();
 
-        auto size = CCDirector::sharedDirector()->getWinSize();
-        float width = std::min(360.f, size.width - 20.f);
-        float height = std::min(290.f, size.height - 20.f);
+        auto win = CCDirector::sharedDirector()->getWinSize();
 
-        m_title->setString("ARTEX - AUTO BUILD");
-        m_status->setString("Choose settings");
+        m_title->setString("ARTEX GENERATOR");
 
-        const char* names[] = {
-            "Difficulty", "Blocks & Spikes", "Portals",
-            "Gamemodes", "Details", "Level Size", "Object Count"
-        };
+        std::string status =
+            std::string(difficulties[m_difficulty]) +
+            " | " + sizes[m_size] +
+            " | " + std::to_string(m_count);
 
-        for (int i = 0; i < 7; i++) {
-            std::string label = names[i];
-            label += ": ";
-            label += m_selected[i];
-            label += " >";
+        m_status->setString(status.c_str());
 
-            addButton(
-                label,
-                0,
-                height / 2 - 55 - i * 23,
-                i,
-                menu_selector(ARTEXPanel::onMainAction),
-                0.43f
-            );
-        }
+        addButton("Difficulty >", -75, 65, 0,
+            menu_selector(ARTEXPanel::onAction));
+
+        addButton("Level Size >", 75, 65, 1,
+            menu_selector(ARTEXPanel::onAction));
+
+        addButton("Object Count >", -75, 20, 2,
+            menu_selector(ARTEXPanel::onAction));
 
         addButton(
-            "BUILD",
-            0,
-            -height / 2 + 43,
-            100,
-            menu_selector(ARTEXPanel::onMainAction),
-            0.65f
+            m_random ? "Random: ON" : "Random: OFF",
+            75, 20, 3,
+            menu_selector(ARTEXPanel::onAction)
         );
 
-        addClose(width, height);
+        addButton("BUILD", 0, -45, 4,
+            menu_selector(ARTEXPanel::onAction), 0.65f);
+
+        addButton("CLOSE", 0, -95, 5,
+            menu_selector(ARTEXPanel::onAction), 0.45f);
     }
 
-    void showPage(int page) {
-        m_page = page;
-        beginMenu();
+    void showOptions() {
+        resetMenu();
 
-        auto size = CCDirector::sharedDirector()->getWinSize();
-        float height = std::min(290.f, size.height - 20.f);
+        auto win = CCDirector::sharedDirector()->getWinSize();
 
-        m_title->setString(pageName(page));
-        m_status->setString("Select an option");
+        if (m_page == 0) {
+            m_title->setString("DIFFICULTY");
 
-        int count = 0;
-        auto options = getOptions(page, count);
+            for (int i = 0; i < 11; i++) {
+                int col = i % 2;
+                int row = i / 2;
 
-        for (int i = 0; i < count; i++) {
-            int column = i % 2;
-            int row = i / 2;
+                float x = col == 0 ? -75.f : 75.f;
+                float y = 95.f - row * 30.f;
 
-            float x = column == 0 ? -85.f : 85.f;
-            float y = height / 2 - 65.f - row * 26.f;
-
-            addButton(
-                options[i],
-                x,
-                y,
-                i,
-                menu_selector(ARTEXPanel::onPick),
-                0.43f
-            );
+                addButton(
+                    difficulties[i], x, y, i,
+                    menu_selector(ARTEXPanel::onPick),
+                    0.37f
+                );
+            }
         }
 
-        addButton(
-            "BACK",
-            0,
-            -height / 2 + 43,
-            200,
-            menu_selector(ARTEXPanel::onBack),
-            0.55f
-        );
+        if (m_page == 1) {
+            m_title->setString("LEVEL SIZE");
 
-        addClose(360.f, height);
+            for (int i = 0; i < 6; i++) {
+                int col = i % 2;
+                int row = i / 2;
+
+                addButton(
+                    sizes[i],
+                    col == 0 ? -75.f : 75.f,
+                    65.f - row * 45.f,
+                    i,
+                    menu_selector(ARTEXPanel::onPick),
+                    0.45f
+                );
+            }
+        }
+
+        if (m_page == 2) {
+            m_title->setString("OBJECT COUNT");
+
+            const char* counts[] = {
+                "100", "250", "500", "1000", "1500"
+            };
+
+            for (int i = 0; i < 5; i++) {
+                addButton(
+                    counts[i],
+                    0,
+                    75.f - i * 35.f,
+                    i,
+                    menu_selector(ARTEXPanel::onPick),
+                    0.45f
+                );
+            }
+        }
+
+        addButton("BACK", 0, -115, 100,
+            menu_selector(ARTEXPanel::onBack), 0.5f);
     }
 
     void buildLevel() {
@@ -216,12 +172,10 @@ class ARTEXPanel : public CCLayer {
             return;
         }
 
-        int count = std::atoi(m_selected[6].c_str());
+        int amount = m_count;
 
-        if (count <= 0) {
-            m_status->setString("Invalid object count");
-            return;
-        }
+        // Ограничение защищает от случайной огромной генерации.
+        amount = std::min(amount, 1500);
 
         float startX = std::max(
             120.f,
@@ -230,13 +184,40 @@ class ARTEXPanel : public CCLayer {
 
         int created = 0;
 
-        for (int i = 0; i < count; i++) {
-            bool spike = (i % 5 == 4);
+        // Сложность увеличивает частоту препятствий.
+        int spikeChance = 2 + m_difficulty;
 
-            int objectID = spike ? 8 : 1;
+        for (int i = 0; i < amount; i++) {
+            int pattern = m_random ? rand() % 6 : i % 6;
 
             float x = startX + i * 30.f;
-            float y = spike ? 120.f : 90.f;
+            float y = 90.f;
+
+            int objectID = 1;
+
+            // Базовый пол.
+            if (pattern == 0 || pattern == 1) {
+                objectID = 1;
+                y = 90.f;
+            }
+
+            // Шипы.
+            else if (pattern == 2 || pattern == 3) {
+                objectID = 8;
+                y = 120.f;
+            }
+
+            // Повышенные платформы.
+            else if (pattern == 4) {
+                objectID = 1;
+                y = 120.f;
+            }
+
+            // Дополнительные препятствия на высокой сложности.
+            else {
+                objectID = (rand() % 100 < spikeChance * 7) ? 8 : 1;
+                y = objectID == 8 ? 120.f : 90.f;
+            }
 
             auto object = editor->createObject(
                 objectID,
@@ -249,9 +230,8 @@ class ARTEXPanel : public CCLayer {
             }
         }
 
-        std::string message = "Created: ";
-        message += std::to_string(created);
-        message += " objects";
+        std::string message =
+            "Created: " + std::to_string(created);
 
         m_status->setString(message.c_str());
     }
@@ -272,18 +252,12 @@ public:
     bool init() {
         if (!CCLayer::init()) return false;
 
-        m_selected[0] = "Easy";
-        m_selected[1] = "Mixed";
-        m_selected[2] = "Mixed";
-        m_selected[3] = "Cube";
-        m_selected[4] = "Medium";
-        m_selected[5] = "Medium";
-        m_selected[6] = "100";
+        srand(static_cast<unsigned int>(time(nullptr)));
 
-        auto size = CCDirector::sharedDirector()->getWinSize();
+        auto win = CCDirector::sharedDirector()->getWinSize();
 
-        float width = std::min(360.f, size.width - 20.f);
-        float height = std::min(290.f, size.height - 20.f);
+        float width = std::min(340.f, win.width - 24.f);
+        float height = std::min(270.f, win.height - 24.f);
 
         auto background = CCLayerColor::create(
             ccc4(24, 29, 45, 245),
@@ -292,34 +266,34 @@ public:
         );
 
         background->setPosition({
-            (size.width - width) / 2,
-            (size.height - height) / 2
+            (win.width - width) / 2,
+            (win.height - height) / 2
         });
 
         this->addChild(background);
 
         m_title = CCLabelBMFont::create(
-            "ARTEX - AUTO BUILD",
+            "ARTEX GENERATOR",
             "bigFont.fnt"
         );
 
-        m_title->setScale(0.55f);
+        m_title->setScale(0.5f);
         m_title->setPosition({
-            size.width / 2,
-            size.height / 2 + height / 2 - 23
+            win.width / 2,
+            win.height / 2 + height / 2 - 22.f
         });
 
         this->addChild(m_title, 5);
 
         m_status = CCLabelBMFont::create(
-            "Choose settings",
+            "Ready",
             "bigFont.fnt"
         );
 
-        m_status->setScale(0.36f);
+        m_status->setScale(0.32f);
         m_status->setPosition({
-            size.width / 2,
-            size.height / 2 - height / 2 + 15
+            win.width / 2,
+            win.height / 2 - height / 2 + 14.f
         });
 
         this->addChild(m_status, 5);
@@ -328,60 +302,79 @@ public:
         return true;
     }
 
-    void onMainAction(CCObject* sender) {
+    void onAction(CCObject* sender) {
         int tag = static_cast<CCNode*>(sender)->getTag();
 
-        if (tag == 100) {
-            buildLevel();
-            return;
+        if (tag >= 0 && tag <= 2) {
+            m_page = tag;
+            showOptions();
         }
-
-        if (tag >= 0 && tag < 7) {
-            showPage(tag);
+        else if (tag == 3) {
+            m_random = !m_random;
+            showMain();
+        }
+        else if (tag == 4) {
+            buildLevel();
+        }
+        else if (tag == 5) {
+            this->removeFromParentAndCleanup(true);
         }
     }
 
     void onPick(CCObject* sender) {
-        int count = 0;
-        auto options = getOptions(m_page, count);
+        int value = static_cast<CCNode*>(sender)->getTag();
 
-        int index = static_cast<CCNode*>(sender)->getTag();
+        if (m_page == 0 && value >= 0 && value < 11) {
+            m_difficulty = value;
+        }
+        else if (m_page == 1 && value >= 0 && value < 6) {
+            m_size = value;
 
-        if (!options || index < 0 || index >= count) return;
+            const int amounts[] = {
+                100, 150, 250, 500, 1000, 1500
+            };
 
-        m_selected[m_page] = options[index];
+            m_count = amounts[value];
+        }
+        else if (m_page == 2) {
+            const int amounts[] = {
+                100, 250, 500, 1000, 1500
+            };
+
+            if (value >= 0 && value < 5) {
+                m_count = amounts[value];
+            }
+        }
+
         showMain();
     }
 
     void onBack(CCObject*) {
         showMain();
     }
-
-    void onClose(CCObject*) {
-        this->removeFromParentAndCleanup(true);
-    }
 };
 
 class $modify(ARTEXEditorUI, EditorUI) {
-
     bool init(LevelEditorLayer* editorLayer) {
         if (!EditorUI::init(editorLayer)) return false;
 
-        auto size = CCDirector::sharedDirector()->getWinSize();
+        auto win = CCDirector::sharedDirector()->getWinSize();
 
         auto menu = CCMenu::create();
         menu->setPosition({0, 0});
 
         auto button = CCMenuItemSpriteExtra::create(
-            ButtonSprite::create("ARTEX"),
+            ButtonSprite::create("A"),
             this,
             menu_selector(ARTEXEditorUI::onARTEX)
         );
 
         button->setPosition({
-            size.width - 55.f,
-            size.height - 45.f
+            win.width - 35.f,
+            win.height - 35.f
         });
+
+        button->setScale(0.75f);
 
         menu->addChild(button);
         this->addChild(menu, 100);
